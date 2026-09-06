@@ -52,9 +52,9 @@ func TestAllToolsValid(t *testing.T) {
 
 // TestExpectedToolCount guards against accidental tool loss/addition.
 func TestExpectedToolCount(t *testing.T) {
-	// 37 since LaunchExecutable was split out of App's launch_executable mode, so
+	// 38 since LaunchExecutable was split out of App's launch_executable mode, so
 	// arbitrary code execution sits in the shell toolset rather than in apps.
-	const want = 37
+	const want = 38
 	if got := len(AllTools()); got != want {
 		t.Errorf("tool count = %d, want %d (update this test intentionally)", got, want)
 	}

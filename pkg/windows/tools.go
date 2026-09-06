@@ -50,6 +50,7 @@ func AllTools() []inventory.ServerTool {
 		FileSystem(),
 		FileSearch(),
 		FolderOverview(),
+		GetIndexedMetadata(),
 
 		// web toolset
 		Scrape(),

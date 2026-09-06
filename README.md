@@ -347,7 +347,32 @@ Every flag has a `WINDOWS_MCP_`-prefixed environment variable (`--read-only` ↔
 | `--record-fps` | Recording frame rate (default 4) |
 | `--record-codec` | `h264`/`h265` (via ffmpeg; small files) or `mjpeg` (pure-Go, no dependency) |
 | `--credentials-file` | JSON file of credentials to install at init |
+| `--index-root` | Enable the live metadata index for an explicitly named local root; repeatable |
+| `--index-max-rows` | Bound the live index cold build (default 500,000) |
 | `--log-file` | Write debug logs to a file (stdout is reserved for the transport) |
+
+### Live metadata index
+
+The optional live index is enabled only for explicitly named local roots:
+
+```powershell
+.\windows-mcp-server.exe index build --root D:\output --out "$env:LOCALAPPDATA\windows-mcp\live-index.json"
+.\windows-mcp-server.exe stdio --toolsets filesystem --index-root D:\output
+```
+
+It stores paths and `os.Stat` metadata only. Windows directory change
+notifications feed a bounded reconciler while the server runs. Search and list
+responses always show the configured roots, exclusions, and per-root
+`watermark`/`indexed_watermark`; watcher overflow or any unobserved gap is
+reported as `possibly_stale` until an operator runs `index refresh`. The default
+exclusions are `.ssh/**`, `.env*`, and `vault/**`; their boundary metadata is
+retained, but their contents are never read. `GetIndexedMetadata` uses a live
+`os.Stat` and reserves an empty fingerprint field for a future content-aware
+layer.
+
+`index refresh --index <path>` is an explicit operator baseline operation. It
+starts notifications before rebuilding and atomically writes the metadata
+snapshot; no MCP tool performs a refresh or build.
 
 ### Secrets in the environment
 

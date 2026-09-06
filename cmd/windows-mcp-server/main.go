@@ -55,6 +55,7 @@ func rootCmd() *cobra.Command {
 	root.AddCommand(auditCmd())
 	root.AddCommand(evidenceCmd())
 	root.AddCommand(journeyCmd())
+	root.AddCommand(indexCmd())
 	root.AddCommand(personasCmd())
 	root.AddCommand(conformanceReportCmd())
 	// Adds `conformance-serve` only under the `conformance` build tag. The
@@ -672,6 +673,8 @@ func stdioCmd() *cobra.Command {
 			cfg.RecordFPS = v.GetInt("record-fps")
 			cfg.RecordCodec = v.GetString("record-codec")
 			cfg.CredentialsFile = v.GetString("credentials-file")
+			cfg.IndexRoots = v.GetStringSlice("index-root")
+			cfg.IndexMaxRows = v.GetInt("index-max-rows")
 			// Read-only is only applied when the operator actually asked for it,
 			// so the flag's zero value cannot override a persona's own read-only
 			// stance. "Asked for it" has to include the environment as well as
@@ -703,6 +706,8 @@ func stdioCmd() *cobra.Command {
 	f.String("credentials-file", "", "JSON file of credentials to install into the Windows Credential Manager at init, "+
 		"for app/web/SSO sign-in. Enables the 'credentials' toolset. Secrets are never accepted as flags or "+
 		"returned to the agent, and are removed from the store when the session ends.")
+	f.StringSlice("index-root", nil, "Enable the live metadata index for this local root; repeat for multiple roots. No file contents are read.")
+	f.Int("index-max-rows", windows.DefaultLiveIndexMaxRows, "Maximum metadata rows in the live index cold build.")
 
 	// Guardrails / admission control (shared with `check`).
 	addGuardrailFlags(f)
