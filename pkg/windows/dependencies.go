@@ -148,15 +148,16 @@ type AssertionRegister interface {
 // BaseDeps is the standard ToolDependencies implementation for the local
 // (stdio) server. It holds pre-created, process-lifetime services.
 type BaseDeps struct {
-	desktop        *desktop.Desktop
-	logger         *slog.Logger
-	featureChecker inventory.FeatureFlagChecker
-	credentials    []desktop.CredentialInfo
-	enforceHTTPS   bool
-	egressProxy    string
-	protectedPaths []ProtectedPath
-	planner        Planner
-	evidence       *evidenceWriter
+	desktop          *desktop.Desktop
+	indexedFileIndex *LiveIndex
+	logger           *slog.Logger
+	featureChecker   inventory.FeatureFlagChecker
+	credentials      []desktop.CredentialInfo
+	enforceHTTPS     bool
+	egressProxy      string
+	protectedPaths   []ProtectedPath
+	planner          Planner
+	evidence         *evidenceWriter
 
 	readMu   sync.Mutex
 	lastRead string
@@ -233,6 +234,19 @@ func (d *BaseDeps) WithProtectedPaths(paths []ProtectedPath) *BaseDeps {
 	d.protectedPaths = paths
 	return d
 }
+
+// WithIndexedFileIndex wires the optional process-local live metadata index.
+// The index is intentionally not part of ToolDependencies: callers that do
+// not configure roots keep the existing discovery behavior, and no fake or
+// transport implementation needs to manufacture an index.
+func (d *BaseDeps) WithIndexedFileIndex(index *LiveIndex) *BaseDeps {
+	d.indexedFileIndex = index
+	return d
+}
+
+// IndexedFileIndex implements the optional capability consumed by the live
+// discovery tools.
+func (d *BaseDeps) IndexedFileIndex() *LiveIndex { return d.indexedFileIndex }
 
 // WithPlanner wires the plan-and-apply engine, so the Plan and Apply tools can
 // reach it. Returns the receiver for chaining.

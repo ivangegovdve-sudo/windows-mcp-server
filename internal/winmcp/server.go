@@ -91,6 +91,14 @@ type Config struct {
 	// argv is readable by any process on the machine. Enabling this also enables
 	// the "credentials" toolset.
 	CredentialsFile string
+
+	// IndexRoots enables the process-local live metadata index for the named
+	// local roots. Its watcher and bounded reconciler are read-only; build and
+	// refresh operations remain operator-facing commands.
+	IndexRoots []string
+	// IndexMaxRows bounds the initial metadata build. Zero uses the package
+	// default.
+	IndexMaxRows int
 }
 
 // SetReadOnly records an explicit read-only choice (distinguishing it from the
@@ -340,10 +348,25 @@ func RunStdio(ctx context.Context, cfg Config) error {
 	}
 	defer cleanupCreds()
 
+	var liveIndex *windows.LiveIndex
+	if len(cfg.IndexRoots) > 0 {
+		liveIndex, _, err = windows.BuildLiveIndex(ctx, cfg.IndexRoots, nil, cfg.IndexMaxRows, logger)
+		if err != nil {
+			if liveIndex != nil {
+				_ = liveIndex.Close()
+			}
+			return fmt.Errorf("live index: %w", err)
+		}
+		defer func() { _ = liveIndex.Close() }()
+	}
+
 	deps := windows.NewBaseDeps(dsk, logger, nil).
 		WithCredentials(credentialInfos(installedCreds)).
 		WithEnforceHTTPS(enforceHTTPS(cfg)).
 		WithProtectedPaths(protectedPaths(cfg, devicePolicy))
+	if liveIndex != nil {
+		deps.WithIndexedFileIndex(liveIndex)
+	}
 
 	// Built by the same function the conformance host uses, so the surface the
 	// official suite is measured against is the surface this binary serves.

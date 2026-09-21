@@ -100,6 +100,14 @@ func FileSearch() inventory.ServerTool {
 				}
 				scopeURI = searchScopeURI(scopePath)
 			}
+			if index := indexedFileIndex(deps); index != nil {
+				result, err := index.Search(ctx, query, scopePath, kind, limit)
+				if err != nil {
+					return NewToolResultErrorFromErr("live indexed search failed", err), nil
+				}
+				result.Items = visibleIndexedItems(deps, result.Items)
+				return NewToolResultText(renderLiveSearch(result)), nil
+			}
 
 			sql, err := buildWindowsSearchSQL(query, scopeURI, kind, limit)
 			if err != nil {
@@ -145,7 +153,7 @@ func FolderOverview() inventory.ServerTool {
 				},
 			},
 		},
-		func(_ context.Context, deps ToolDependencies, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		func(ctx context.Context, deps ToolDependencies, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 			args, err := ArgsMap(req)
 			if err != nil {
 				return NewToolResultError(err.Error()), nil
@@ -160,6 +168,24 @@ func FolderOverview() inventory.ServerTool {
 			maxEntries = clampInt(maxEntries, 1, maxOverviewEntries)
 
 			rawPath := strings.TrimSpace(OptionalString(args, "path", ""))
+			if index := indexedFileIndex(deps); index != nil {
+				path := ""
+				if rawPath != "" {
+					path, err = resolveLocalFolder(rawPath)
+					if err != nil {
+						return NewToolResultError(err.Error()), nil
+					}
+					if r := checkProtected(deps, path, false); r != nil {
+						return r, nil
+					}
+				}
+				result, err := index.List(ctx, path, maxEntries)
+				if err != nil {
+					return NewToolResultErrorFromErr("live indexed list failed", err), nil
+				}
+				result.Items = visibleIndexedItems(deps, result.Items)
+				return NewToolResultText(renderLiveList(path, result)), nil
+			}
 			if rawPath != "" {
 				path, err := resolveLocalFolder(rawPath)
 				if err != nil {
